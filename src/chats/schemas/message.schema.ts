@@ -1,0 +1,65 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
+
+export type MessageDocument = Message & Document;
+
+class MessageAttachment {
+  @Prop({ required: true })
+  name: string;
+
+  @Prop({ required: true })
+  mimeType: string;
+
+  @Prop({ required: true })
+  url: string;
+
+  @Prop({ enum: ['image', 'file'], default: 'file' })
+  type: 'image' | 'file';
+
+  @Prop()
+  size?: number;
+}
+
+@Schema({ timestamps: true, collection: 'messages' })
+export class Message {
+  @Prop({ required: true, index: true })
+  conversationId: string;
+
+  @Prop({ required: true })
+  adId: string;
+
+  @Prop()
+  adTitle?: string;
+
+  @Prop()
+  adImage?: string;
+
+  @Prop()
+  adPrice?: number;
+
+  @Prop()
+  adLocation?: string;
+
+  @Prop({ required: true })
+  senderId: string;
+
+  @Prop({ required: true })
+  text: string;
+
+  @Prop({ type: [MessageAttachment], default: [] })
+  attachments: MessageAttachment[];
+
+  @Prop({ type: [String], default: [] })
+  readBy: string[];
+
+  @Prop()
+  createdAt: Date;
+
+  @Prop()
+  updatedAt: Date;
+}
+
+export const MessageSchema = SchemaFactory.createForClass(Message);
+
+MessageSchema.index({ conversationId: 1, createdAt: 1 });
+MessageSchema.index({ adId: 1, createdAt: -1 });

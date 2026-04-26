@@ -1,0 +1,245 @@
+import { 
+  Controller, Post, Body, Get, Put, Delete, Param, 
+  UseGuards, Query, Ip, NotFoundException 
+} from '@nestjs/common';
+
+import { UsersService } from './users.service';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { SocialAuthDto } from './dto/social-auth.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { UserRole } from './schemas/user.schema';
+import { RedisService } from '../common/services/redis.service';
+
+@Controller('users')
+export class UsersController {
+
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly redisService: RedisService,
+  ) {}
+
+  // ==================== USER REPORT ====================
+  @Post(':id/report')
+  @UseGuards(JwtAuthGuard)
+  async reportUser(
+    @Param('id') id: string,
+    @CurrentUser() reporter: any,
+    @Body() body: { reason: string; description?: string; evidenceUrls?: string[] }
+  ) {
+    const { reason, description, evidenceUrls } = body;
+    const reporterId = reporter?.id || reporter?._id;
+    if (!reporterId) {
+      throw new Error('Authenticated user id not found');
+    }
+    const result = await this.usersService.submitUserReport(
+      id,
+      reporterId,
+      reason,
+      description,
+      evidenceUrls,
+    );
+    return { success: true, ...result };
+  }
+
+  // ==================== ADMIN SUSPEND/UNSUSPEND ====================
+  @Post('admin/users/:id/ban')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async banUser(
+    @Param('id') id: string,
+    @Body('reason') reason: string,
+    @Body('duration') duration: number,
+    @CurrentUser() admin: any,
+  ) {
+    const user = await this.usersService.banUser(id, reason, admin.id, admin.email, duration);
+    return { success: true, data: user };
+  }
+
+  @Post('admin/users/:id/unban')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async unbanUser(
+    @Param('id') id: string,
+    @CurrentUser() admin: any,
+  ) {
+    const user = await this.usersService.unbanUser(id, admin.id, admin.email);
+    return { success: true, data: user };
+  }
+
+  // ==================== PUBLIC ROUTES ====================
+  @Post('register')
+  async register(@Body() dto: RegisterDto, @Ip() ip: string) {
+    const user = await this.usersService.register(dto);
+    return { success: true, message: 'User registered successfully', data: user };
+  }
+
+  @Post('login')
+  async login(@Body() dto: LoginDto, @Ip() ip: string) {
+    const result = await this.usersService.login(dto, ip);
+    return { success: true, message: 'Login successful', data: result };
+  }
+
+  @Post('social-auth')
+  async socialAuth(@Body() dto: SocialAuthDto, @Ip() ip: string) {
+    const result = await this.usersService.socialAuth(dto, ip);
+    return { success: true, message: 'Social login successful', data: result };
+  }
+
+  @Post('refresh')
+  async refreshToken(@Body() dto: RefreshTokenDto) {
+    const result = await this.usersService.refreshToken(dto.refreshToken);
+    return { success: true, data: result };
+  }
+
+  @Get('dashboard/stats')
+  async getDashboardStats() {
+    const cacheKey = 'golo:users:dashboard:stats';
+    const cached = await this.redisService.get<any>(cacheKey);
+    if (cached) {
+      return { success: true, data: cached, fromCache: true };
+    }
+
+    const stats = await this.usersService.getDashboardStatsPublic();
+    await this.redisService.set(cacheKey, stats, 90);
+    return { success: true, data: stats };
+  }
+
+  // ==================== USER ROUTES ====================
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  async logout(@CurrentUser() user: any, @Body() dto: RefreshTokenDto) {
+    await this.usersService.logout(user.id, dto.refreshToken);
+    return { success: true, message: 'Logout successful' };
+  }
+
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  async getProfile(@CurrentUser() user: any) {
+    const profile = await this.usersService.getProfile(user.id);
+    return { success: true, data: profile };
+  }
+
+  @Get('merchant/profile')
+  @UseGuards(JwtAuthGuard)
+  async getMerchantProfile(@CurrentUser() user: any) {
+    const data = await this.usersService.getMerchantProfile(user.id);
+    return { success: true, data };
+  }
+
+  @Put('profile')
+  @UseGuards(JwtAuthGuard)
+  async updateProfile(@CurrentUser() user: any, @Body() data: any) {
+    const profile = await this.usersService.updateProfile(user.id, data);
+    return { success: true, message: 'Profile updated successfully', data: profile };
+  }
+
+  // ==================== PASSWORD OTP ====================
+  @Post('send-password-otp')
+  @UseGuards(JwtAuthGuard)
+  async sendOTP(@CurrentUser() user: any) {
+    const result = await this.usersService.sendPasswordChangeOTP(user.id);
+    return { success: true, message: 'OTP sent', data: result };
+  }
+
+  @Post('verify-password-otp')
+  @UseGuards(JwtAuthGuard)
+  async verifyOTP(@CurrentUser() user: any, @Body() body: any) {
+    const result = await this.usersService.verifyPasswordChangeOTP(user.id, body.otp);
+    return { success: true, message: 'OTP verified', data: result };
+  }
+
+  @Post('change-password-otp')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(@CurrentUser() user: any, @Body() body: any) {
+    const result = await this.usersService.changePasswordWithOTP(user.id, body.otp, body.newPassword);
+    return { success: true, message: 'Password changed', data: result };
+  }
+
+  // ==================== WISHLIST ====================
+
+  @Get('wishlist')
+  @UseGuards(JwtAuthGuard)
+  async getWishlist(@CurrentUser() user: any) {
+    return { success: true, data: await this.usersService.getWishlistAds(user.id) };
+  }
+
+  @Get('wishlist/ids')
+  @UseGuards(JwtAuthGuard)
+  async getWishlistIds(@CurrentUser() user: any) {
+    return { success: true, data: await this.usersService.getWishlistIds(user.id) };
+  }
+
+  @Post('wishlist/:adId')
+  @UseGuards(JwtAuthGuard)
+  async toggleWishlist(@CurrentUser() user: any, @Param('adId') adId: string) {
+    return { success: true, data: await this.usersService.toggleWishlist(user.id, adId) };
+  }
+
+  // ==================== NOTIFICATIONS ====================
+  @Get('notifications')
+  @UseGuards(JwtAuthGuard)
+  async getNotifications(
+    @CurrentUser() user: any,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('type') type?: string,
+  ) {
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.max(1, Math.min(100, Number(limit) || 20));
+    return {
+      success: true,
+      data: await this.usersService.getNotifications(
+        user.id,
+        safePage,
+        safeLimit,
+        type,
+      ),
+    };
+  }
+
+  @Post('notifications/:notificationId/read')
+  @UseGuards(JwtAuthGuard)
+  async markNotificationRead(
+    @CurrentUser() user: any,
+    @Param('notificationId') notificationId: string,
+  ) {
+    await this.usersService.markNotificationRead(notificationId, user.id);
+    return { success: true };
+  }
+
+  @Post('notifications/read-all')
+  @UseGuards(JwtAuthGuard)
+  async markAllNotificationsRead(@CurrentUser() user: any) {
+    await this.usersService.markAllNotificationsRead(user.id);
+    return { success: true };
+  }
+
+  // ==================== ADMIN ====================
+  @Get('admin/users')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async adminGetAllUsers() {
+    return { success: true, data: await this.usersService.adminGetAllUsers() };
+  }
+
+  @Delete('admin/users/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async deleteUser(@Param('id') id: string, @CurrentUser() admin: any) {
+    await this.usersService.adminDeleteUser(id, admin.id, admin.email);
+    return { success: true };
+  }
+
+  // ==================== DYNAMIC ====================
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  async getUser(@Param('id') id: string) {
+    return { success: true, data: await this.usersService.getUserById(id) };
+  }
+}
