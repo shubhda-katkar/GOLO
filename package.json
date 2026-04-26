@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Ads posting microservice with NestJS and Kafka",
   "scripts": {
-    "build": "npx nest build",
+    "build": "nest build",
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
@@ -49,8 +49,9 @@
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "socket.io": "^4.7.5",
-    "uuid": "^9.0.0",
-  
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
     "@nestjs/cli": "^10.0.0",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
@@ -91,5 +92,10 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
-  }
+  },
+
+  
+  "engines": {
+  "node": "18.x"
+}
 }
