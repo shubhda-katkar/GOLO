@@ -70,14 +70,14 @@ async function bootstrap() {
   const corsOrigins = configService.get<string[]>('config.cors.origins') || [];
 
   app.enableCors({
-    origin: corsOrigins.length > 0 ? corsOrigins : ['http://localhost:3000', 'http://localhost:3001'],
+    origin: '*', // TEMP for testing mobile app
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  const port = configService.get('config.service.port');
-  await app.listen(port);
+ const port = process.env.PORT || configService.get('config.service.port') || 3000;
+await app.listen(port);
   logger.log(`HTTP mode enabled. Ads microservice is running on port ${port}`);
 }
 bootstrap();
