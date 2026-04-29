@@ -253,7 +253,7 @@ export class VouchersService implements OnModuleInit {
             merchantIdStr,
             0, // amount (voucher-based, no monetary value by default)
             1,
-            String(voucher._id), // link order to this voucher
+            voucher.voucherId, // use the string voucherId for order linkage
           );
         }
       } catch (orderErr) {
