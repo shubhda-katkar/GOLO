@@ -58,7 +58,7 @@ export class OrdersService {
         );
       }
     } catch (notifError) {
-      this.logger.error(`Failed to create notification: ${notifError.message}`);
+      this.logger.error(`Failed to create notification: ${(notifError as Error).message}`);
     }
 
     return {
@@ -75,7 +75,6 @@ export class OrdersService {
       },
     };
   }
-
   async getMerchantOrders(merchantId: string, page = 1, limit = 20, status?: string) {
     const query: any = { merchantId: new Types.ObjectId(merchantId) };
     if (status && status !== 'all') {
@@ -114,7 +113,6 @@ export class OrdersService {
       },
     };
   }
-
   async getMerchantOrderStats(merchantId: string) {
     const mId = new Types.ObjectId(merchantId);
     const startOfDay = new Date();
@@ -152,7 +150,6 @@ export class OrdersService {
       },
     };
   }
-
   async updateOrderStatus(merchantId: string, orderId: string, status: OrderStatus) {
     if (!Object.values(OrderStatus).includes(status)) {
       throw new BadRequestException('Invalid order status');
@@ -218,7 +215,7 @@ export class OrdersService {
         });
       }
     } catch (notifError) {
-      this.logger.error(`Failed to create status update notification: ${notifError.message}`);
+      this.logger.error(`Failed to create status update notification: ${(notifError as Error).message}`);
     }
 
     return {
@@ -232,9 +229,6 @@ export class OrdersService {
       },
     };
   }
-}
-<<<<<<< HEAD
-=======
   async completeOrderWithQr(merchantId: string, orderId: string, qrData: any) {
     if (!qrData) {
       throw new BadRequestException('Missing qrData');
@@ -284,7 +278,7 @@ export class OrdersService {
         read: false,
       });
     } catch (notifError) {
-      this.logger.error(`Failed to create completion notification: ${notifError.message}`);
+      this.logger.error(`Failed to create completion notification: ${(notifError as Error).message}`);
     }
 
     return {
@@ -297,3 +291,4 @@ export class OrdersService {
       },
     };
   }
+}
