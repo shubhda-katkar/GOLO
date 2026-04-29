@@ -11,6 +11,7 @@ import {
 } from '../banners/schemas/banner-promotion.schema';
 import { UserDocument } from '../users/schemas/user.schema';
 import { VouchersGateway } from './vouchers.gateway';
+import { OrdersService } from '../orders/orders.service';
 
 @Injectable()
 export class VouchersService implements OnModuleInit {
@@ -31,6 +32,7 @@ export class VouchersService implements OnModuleInit {
     @InjectModel('Notification')
     private notificationModel: Model<NotificationDocument>,
     private readonly vouchersGateway: VouchersGateway,
+    private readonly ordersService: OrdersService,
   ) {}
 
   async onModuleInit() {
@@ -241,6 +243,22 @@ export class VouchersService implements OnModuleInit {
         merchantId: offer.merchantId?.toString?.() || String(offer.merchantId || ''),
         offerTitle: offer.bannerTitle || 'Offer',
       });
+
+      // Auto-create a pending Order so merchant can accept/reject from the Orders tab
+      try {
+        const merchantIdStr = offer.merchantId?.toString?.() || String(offer.merchantId || '');
+        if (merchantIdStr && merchantIdStr !== userId) {
+          await this.ordersService.createOrder(
+            userId,
+            merchantIdStr,
+            0, // amount (voucher-based, no monetary value by default)
+            1,
+            String(voucher._id), // link order to this voucher
+          );
+        }
+      } catch (orderErr) {
+        this.logger.warn(`Failed to create order for voucher claim: ${orderErr.message}`);
+      }
 
       const liveClaimPayload = {
         id: String(voucher._id),

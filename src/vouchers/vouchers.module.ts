@@ -11,6 +11,7 @@ import { User, UserSchema } from '../users/schemas/user.schema';
 import { Notification, NotificationSchema } from '../users/schemas/notification.schema';
 import { KafkaModule } from '../kafka/kafka.module';
 import { VouchersKafkaController } from './vouchers.kafka.controller';
+import { OrdersModule } from '../orders/orders.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { VouchersKafkaController } from './vouchers.kafka.controller';
       inject: [ConfigService],
     }),
     forwardRef(() => KafkaModule),
+    forwardRef(() => OrdersModule),
   ],
   controllers: [VouchersController, VouchersKafkaController],
   providers: [VouchersService, VouchersGateway],
