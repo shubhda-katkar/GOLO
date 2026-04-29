@@ -233,3 +233,67 @@ export class OrdersService {
     };
   }
 }
+<<<<<<< HEAD
+=======
+  async completeOrderWithQr(merchantId: string, orderId: string, qrData: any) {
+    if (!qrData) {
+      throw new BadRequestException('Missing qrData');
+    }
+
+    const order = await this.orderModel.findOne({
+      _id: new Types.ObjectId(orderId),
+      merchantId: new Types.ObjectId(merchantId),
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // Determine offer/voucher id from payload
+    const payloadOffer = qrData.offerId || qrData.voucherId || qrData.voucher;
+    const orderOffer = order.voucherId;
+    if (String(payloadOffer) !== String(orderOffer)) {
+      throw new BadRequestException('QR does not match order');
+    }
+
+    // Verify user name
+    const customer = await this.userModel.findById(order.userId).select('name').lean().exec();
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+    if ((qrData.userName || '') !== (customer.name || '')) {
+      throw new BadRequestException('QR user does not match order');
+    }
+
+    order.status = OrderStatus.COMPLETED;
+    order.completedAt = new Date();
+    await order.save();
+
+    // Notify customer
+    try {
+      const merchant = await this.userModel.findById(merchantId).select('name').lean().exec();
+      const merchantName = (merchant as any)?.name || 'Merchant';
+      await this.notificationModel.create({
+        recipientId: String(order.userId),
+        senderId: String(merchantId),
+        senderName: merchantName,
+        adId: order.voucherId || 'order',
+        adTitle: `${merchantName} completed your order`,
+        type: 'order_completed',
+        message: `${merchantName} completed your claimed offer`,
+        read: false,
+      });
+    } catch (notifError) {
+      this.logger.error(`Failed to create completion notification: ${notifError.message}`);
+    }
+
+    return {
+      success: true,
+      message: 'Order completed',
+      data: {
+        _id: String(order._id),
+        status: order.status,
+        completedAt: order.completedAt,
+      },
+    };
+  }

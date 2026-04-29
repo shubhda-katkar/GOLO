@@ -35,4 +35,14 @@ export class OrdersController {
     const merchantId = user?.id || user?._id;
     return this.ordersService.updateOrderStatus(merchantId, orderId, status);
   }
+
+  @Post(':orderId/complete')
+  async completeOrderWithQr(
+    @CurrentUser() user: any,
+    @Param('orderId') orderId: string,
+    @Body('qrData') qrData: any,
+  ) {
+    const merchantId = user?.id || user?._id;
+    return this.ordersService.completeOrderWithQr(merchantId, orderId, qrData);
+  }
 }
