@@ -5,17 +5,59 @@ export type PropertyDocument = Property & Document;
 
 @Schema({ _id: false, timestamps: false })
 export class Property {
-  @Prop({ enum: ['Rent', 'Sell'] })
-  listingType?: string;
 
-  @Prop({ enum: ['Apartment', 'House', 'Villa', 'Commercial', 'Land', 'Office'] })
-  propertyType?: string;
+  @Prop({ required: true })
+  noticeType: string;
 
   @Prop()
-  rent?: number;
+  propertyType: string;
+
+  // Sell
+  @Prop()
+  bhk: string;
 
   @Prop()
-  bhk?: string;
+  builtUpArea: string;
+
+  @Prop()
+  bathrooms: string;
+
+  @Prop()
+  floor: string;
+
+  @Prop()
+  propertyAge: string;
+
+  @Prop()
+  furnishing: string;
+
+  @Prop()
+  condition: string; // parking yes/no
+
+  @Prop()
+  facingSide: string;
+
+  @Prop()
+  price: string;
+
+  // Rent
+  @Prop()
+  monthlyRentAmount: string;
+
+  @Prop()
+  securityDeposit: string;
+
+  @Prop()
+  maintenanceAmount: string;
+
+  @Prop()
+  availableFrom: string;
+
+  @Prop()
+  tenantType: string;
+
+  @Prop()
+  leaseDuration: string;
 }
 
 export const PropertySchema = SchemaFactory.createForClass(Property);

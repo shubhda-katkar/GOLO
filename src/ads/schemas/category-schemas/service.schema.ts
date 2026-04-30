@@ -5,23 +5,27 @@ export type ServiceDocument = Service & Document;
 
 @Schema({ _id: false, timestamps: false })
 export class Service {
-  @Prop()
-  serviceCategory?: string;
+
+  @Prop({ required: true })
+  serviceCategory: string;
 
   @Prop()
-  experience?: number | string;
+  experience: string;
 
   @Prop()
-  charges?: number | string;
+  serviceArea: string;
 
   @Prop()
-  availableTime?: string;
-
-  @Prop({ type: [String] })
-  serviceArea?: string[] | string;
+  availableTime: string;
 
   @Prop()
-  bio?: string;
+  charges: string;
+
+  @Prop({ default: false })
+  emergencyService: boolean;
+
+  @Prop()
+  serviceBio: string;
 }
 
 export const ServiceSchema = SchemaFactory.createForClass(Service);

@@ -14,6 +14,9 @@ import { Travel, TravelSchema } from './travel.schema';
 import { Astrology, AstrologySchema } from './astrology.schema';
 import { Employment, EmploymentSchema } from './employment.schema';
 import { LostFound, LostFoundSchema } from './lost-found.schema';
+import { Greetings, GreetingsSchema } from './greetings.schema';
+import { Others, OthersSchema } from './others.schema'
+import { PublicNotice, PublicNoticeSchema } from './public-notice.schema';
 
 export type AdDocument = Ad & Document;
 
@@ -33,7 +36,7 @@ export class Ad {
       'Education', 'Matrimonial', 'Vehicle', 'Business', 'Travel',
       'Astrology', 'Property', 'Public Notice', 'Lost & Found',
       'Service', 'Personal', 'Employment', 'Pets', 'Mobiles',
-      'Electronics & Home appliances', 'Furniture', 'Greetings & Tributes', 'Other'
+      'Electronics & Home appliances', 'Furniture', 'Others', 'Greetings'
     ]
   })
   category: string;
@@ -58,15 +61,6 @@ export class Ad {
 
   @Prop({ default: false })
   negotiable: boolean;
-
-  @Prop({ default: 0 })
-  editCount: number;
-
-  @Prop({ default: false })
-  hasUsedEdit: boolean;
-
-  @Prop()
-  editedAt: Date;
 
   @Prop({ required: true })
   location: string;
@@ -129,6 +123,9 @@ export class Ad {
     | Astrology
     | Employment
     | LostFound
+    | Greetings
+    | Others
+    | PublicNotice
     | any;
 
 
@@ -157,10 +154,19 @@ export class Ad {
   views: number;
 
   @Prop({ default: 0 })
-  contactClicks: number;   // incremented when user clicks Chat/Call on the ad
+  cardClicks: number;
+
+  @Prop({ default: 0 })
+  uniqueVisitors: number;
 
   @Prop({ type: [String], default: [] })
-  viewHistory: string[];   // stores userId or IP for unique visitor tracking
+  visitorEmails: string[];
+
+  @Prop({ default: 0 })
+  contactClicks: number;
+
+  @Prop({ default: 0 })
+  wishlistSaves: number;
 
   @Prop({ type: [String] })
   tags: string[];
@@ -201,32 +207,6 @@ export class Ad {
   @Prop()
   rejectionReason: string;
 
-  // ==================== REPORTING & MODERATION ====================
-  
-  @Prop({ default: 0 })
-  reportCount: number;
-
-  @Prop({ default: false })
-  isUnderReview: boolean;
-
-  @Prop({ default: false })
-  autoDisabled: boolean;
-
-  @Prop()
-  disabledAt: Date;
-
-  @Prop()
-  disabledReason: string;
-
-  @Prop()
-  reviewedBy: string;
-
-  @Prop()
-  reviewedAt: Date;
-
-  @Prop()
-  expiredAt: Date;  // When the ad was marked as expired (for 1-day grace period)
-
   @Prop()
   createdAt: Date;
 
@@ -246,7 +226,5 @@ AdSchema.index({ category: 1, status: 1, createdAt: -1 });
 AdSchema.index({ location: 1, category: 1 });
 AdSchema.index({ price: 1 });
 AdSchema.index({ city: 1, category: 1 });
-// Ad expiry cleanup indexes (no TTL — we handle expiry + grace period in application code)
-AdSchema.index({ status: 1, expiryDate: 1 });
-AdSchema.index({ status: 1, expiredAt: 1 });
+AdSchema.index({ expiryDate: 1 });
 AdSchema.index({ isPromoted: 1, promotedUntil: 1 });

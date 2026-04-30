@@ -5,23 +5,30 @@ export type ElectronicsDocument = Electronics & Document;
 
 @Schema({ _id: false, timestamps: false })
 export class Electronics {
-  @Prop()
-  applianceType?: string;
+
+  @Prop({ required: true })
+  electronicsType: string;
 
   @Prop()
-  brand?: string;
+  brand: string;
 
   @Prop()
-  model?: string;
+  modelNumber: string;
 
   @Prop()
-  condition?: string;
+  warrantyRemaining: string;
 
   @Prop()
-  warranty?: string;
+  capacity: string;
+
+  @Prop({ enum: ['new', 'like new', 'fair'] })
+  condition: string;
 
   @Prop()
-  price?: number;
+  negotiable: boolean;
+
+  @Prop({ required: true })
+  price: string;
 }
 
 export const ElectronicsSchema = SchemaFactory.createForClass(Electronics);

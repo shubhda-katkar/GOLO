@@ -5,56 +5,65 @@ export type VehicleDocument = Vehicle & Document;
 
 @Schema({ _id: false, timestamps: false })
 export class Vehicle {
-  @Prop({ enum: ['Rent', 'Sell'] })
-  type?: string;
+
+  @Prop({ required: true, enum: ['Rent', 'Sell'] })
+  type: string;
 
   @Prop()
   vehicleType?: string;
 
   @Prop()
+  vehicleType2?: string;
+
+  @Prop()
   brand?: string;
+
+  @Prop()
+  brand2?: string;
 
   @Prop()
   model?: string;
 
   @Prop()
-  brandModel?: string;
-
-  @Prop()
-  rentAmount?: number;
-
-  @Prop()
-  securityDeposit?: number;
-
-  @Prop({ enum: ['Yes', 'No', 'Both'] })
-  includesDriver?: string;
-
-  @Prop()
-  minRentalDuration?: string;
+  variant?: string;
 
   @Prop()
   year?: number;
 
-  @Prop({ enum: ['Petrol', 'Diesel', 'Electric', 'Hybrid', 'CNG'] })
+  @Prop()
+  kilometersDriven?: number;
+
+  @Prop()
   fuelType?: string;
 
   @Prop({ enum: ['Manual', 'Automatic'] })
   transmission?: string;
 
   @Prop()
-  kilometersDriven?: number;
-
-  @Prop()
-  price?: number;
+  ownership?: string;
 
   @Prop()
   insurance?: string;
 
   @Prop()
-  ownerNumber?: number;
+  condition?: string;
 
   @Prop()
-  condition?: string;
+  price?: number;
+
+  // Rent fields
+
+  @Prop()
+  perDayRentAmount?: number;
+
+  @Prop()
+  securityDeposit?: number;
+
+  @Prop({ enum: ['yes', 'no', 'both'] })
+  includesDriver?: string;
+
+  @Prop()
+  minRentalDuration?: string;
 }
 
 export const VehicleSchema = SchemaFactory.createForClass(Vehicle);

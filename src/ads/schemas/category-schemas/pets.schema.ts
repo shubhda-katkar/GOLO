@@ -5,20 +5,39 @@ export type PetsDocument = Pets & Document;
 
 @Schema({ _id: false, timestamps: false })
 export class Pets {
-  @Prop()
-  species?: string;
+
+  @Prop({ required: true })
+  species: string;
 
   @Prop()
-  breed?: string;
+  breed: string;
 
   @Prop()
-  age?: number | string;
+  age: string;
 
   @Prop()
-  gender?: string;
+  gender: string;
 
   @Prop()
-  weight?: string;
+  weight: string;
+
+  @Prop({ default: false })
+  friendly: boolean;
+
+  @Prop({ default: false })
+  quiet: boolean;
+
+  @Prop({ default: false })
+  active: boolean;
+
+  @Prop({ default: false })
+  protective: boolean;
+
+  @Prop({ default: false })
+  kidfriendly: boolean;
+
+  @Prop()
+  specialDiet: string;
 }
 
 export const PetsSchema = SchemaFactory.createForClass(Pets);

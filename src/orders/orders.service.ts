@@ -15,6 +15,12 @@ export class OrdersService {
     @InjectModel('Notification') private readonly notificationModel: Model<NotificationDocument>,
   ) {}
 
+  private extractVoucherIdFromQrString(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+    const match = value.match(/^voucher-(VOUCHER-\d+)-[A-Za-z0-9]+$/);
+    return match?.[1] || null;
+  }
+
   async createOrder(
     userId: string,
     merchantId: string,
@@ -229,6 +235,25 @@ export class OrdersService {
       },
     };
   }
+
+  async completeOrderByVoucherId(merchantId: string, voucherId: string) {
+    const order = await this.orderModel
+      .findOne({
+        merchantId: new Types.ObjectId(merchantId),
+        voucherId,
+        status: { $in: [OrderStatus.ACCEPTED, OrderStatus.PENDING] },
+      })
+      .sort({ placedAt: -1 });
+
+    if (!order) {
+      return {
+        success: false,
+        message: 'No open order found for this voucher',
+      };
+    }
+
+    return this.updateOrderStatus(merchantId, String(order._id), OrderStatus.COMPLETED);
+  }
   async completeOrderWithQr(merchantId: string, orderId: string, qrData: any) {
     if (!qrData) {
       throw new BadRequestException('Missing qrData');
@@ -243,8 +268,12 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    // Determine offer/voucher id from payload
-    const payloadOffer = qrData.offerId || qrData.voucherId || qrData.voucher;
+    // Determine offer/voucher id from payload (supports both JSON payload and raw voucher-* QR string)
+    const payloadOffer =
+      qrData?.offerId ||
+      qrData?.voucherId ||
+      qrData?.voucher ||
+      this.extractVoucherIdFromQrString(qrData);
     const orderOffer = order.voucherId;
     if (String(payloadOffer) !== String(orderOffer)) {
       throw new BadRequestException('QR does not match order');

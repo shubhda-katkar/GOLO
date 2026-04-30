@@ -778,6 +778,20 @@ export class VouchersService implements OnModuleInit {
       voucher.redemptionCode = redemptionCode;
       await voucher.save();
 
+      // Keep Orders tab in sync: move linked accepted/pending order to COMPLETED.
+      try {
+        if (actualMerchantId) {
+          await this.ordersService.completeOrderByVoucherId(
+            String(actualMerchantId),
+            String(voucher.voucherId),
+          );
+        }
+      } catch (orderSyncError) {
+        this.logger.warn(
+          `Voucher redeemed but order sync failed for voucher ${voucher.voucherId}: ${orderSyncError.message}`,
+        );
+      }
+
       // Get user details
       const user = await this.userModel.findById(voucher.userId).select('name email');
 

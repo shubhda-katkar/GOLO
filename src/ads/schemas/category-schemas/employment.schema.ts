@@ -5,29 +5,43 @@ export type EmploymentDocument = Employment & Document;
 
 @Schema({ _id: false, timestamps: false })
 export class Employment {
-  @Prop({ enum: ['Full Time', 'Part Time', 'Contract', 'Internship', 'Freelance'] })
-  jobType?: string;
+
+  @Prop({
+    required: true,
+    enum: ['full time', 'part time', 'contract'],
+  })
+  employmentType: string;
+
+  @Prop({
+    required: true,
+    enum: ['entry level', 'mid level', 'senior level'],
+  })
+  experienceLevel: string;
 
   @Prop()
-  jobTitle?: string;
+  industry: string;
 
   @Prop()
-  companyName?: string;
+  salaryRangeMin: string;
 
   @Prop()
-  experienceRequired?: string;
+  salaryRangeMax: string;
 
   @Prop()
-  salary?: string;
+  vacancies: number;
 
-  @Prop()
-  qualifications?: string;
+  // Benefits
+  @Prop({ default: false })
+  insurance: boolean;
 
-  @Prop()
-  description?: string;
+  @Prop({ default: false })
+  paidoff: boolean;
 
-  @Prop()
-  vacancies?: number;
+  @Prop({ default: false })
+  workFromHome: boolean;
+
+  @Prop({ default: false })
+  annualBonus: boolean;
 }
 
 export const EmploymentSchema = SchemaFactory.createForClass(Employment);
