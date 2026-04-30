@@ -1017,14 +1017,21 @@ export class VouchersService implements OnModuleInit {
   }
 
   async getMerchantLoyaltyRewards(merchantId: string) {
+    const merchantObjectId = isValidObjectId(merchantId)
+      ? new Types.ObjectId(merchantId)
+      : null;
+
     const rewardRows = await this.voucherModel
       .find({
-        merchantId: new Types.ObjectId(merchantId),
+        $or: [
+          ...(merchantObjectId
+            ? [{ merchantId: merchantObjectId }, { redeemedByMerchantId: merchantObjectId }]
+            : []),
+          { merchantId: merchantId as any },
+        ],
         status: VoucherStatus.REDEEMED,
-        loyaltyRewardApplied: true,
-        loyaltyPointsAwarded: { $gt: 0 },
       })
-      .select('userId loyaltyPointsAwarded loyaltyAwardedAt redeemedAt offerTitle voucherId')
+      .select('userId offerId loyaltyPointsAwarded loyaltyRewardApplied loyaltyAwardedAt redeemedAt offerTitle voucherId')
       .sort({ loyaltyAwardedAt: -1, redeemedAt: -1 })
       .lean()
       .exec();
@@ -1040,7 +1047,50 @@ export class VouchersService implements OnModuleInit {
       };
     }
 
-    const userIds = [...new Set(rewardRows.map((row: any) => String(row.userId)).filter(Boolean))];
+    const offerIds = [...new Set(rewardRows.map((row: any) => String(row.offerId)).filter(Boolean))];
+    const offers = await this.bannerModel
+      .find({ _id: { $in: offerIds } })
+      .select('loyaltyRewardEnabled loyaltyStarsToOffer')
+      .lean()
+      .exec();
+    const offerLoyaltyMap = new Map(
+      offers.map((offer: any) => [
+        String(offer._id),
+        {
+          enabled: Boolean(offer.loyaltyRewardEnabled),
+          points: Number(offer.loyaltyStarsToOffer || 0),
+        },
+      ]),
+    );
+
+    const normalizedRows = (rewardRows as any[])
+      .map((row) => {
+        const fromVoucher = Number(row.loyaltyPointsAwarded || 0);
+        const offerConfig = offerLoyaltyMap.get(String(row.offerId));
+        const fallbackFromOffer =
+          offerConfig?.enabled && Number(offerConfig.points || 0) > 0
+            ? Number(offerConfig.points || 0)
+            : 0;
+        const effectivePoints = fromVoucher > 0 ? fromVoucher : fallbackFromOffer;
+        return {
+          ...row,
+          effectivePoints,
+        };
+      })
+      .filter((row) => row.effectivePoints > 0);
+
+    if (!normalizedRows.length) {
+      return {
+        success: true,
+        data: {
+          totalCustomers: 0,
+          totalPointsAwarded: 0,
+          customers: [],
+        },
+      };
+    }
+
+    const userIds = [...new Set(normalizedRows.map((row: any) => String(row.userId)).filter(Boolean))];
     const users = await this.userModel
       .find({ _id: { $in: userIds } })
       .select('name')
@@ -1059,9 +1109,9 @@ export class VouchersService implements OnModuleInit {
       }
     >();
 
-    for (const row of rewardRows as any[]) {
+    for (const row of normalizedRows as any[]) {
       const uid = String(row.userId);
-      const points = Number(row.loyaltyPointsAwarded || 0);
+      const points = Number(row.effectivePoints || 0);
       const awardedAt = row.loyaltyAwardedAt || row.redeemedAt || null;
       const current = customerMap.get(uid);
       if (!current) {
