@@ -153,6 +153,9 @@ export class Ad {
   @Prop({ default: 0 })
   views: number;
 
+  @Prop({ type: [String], default: [] })
+  viewHistory: string[];
+
   @Prop({ default: 0 })
   cardClicks: number;
 
@@ -167,6 +170,30 @@ export class Ad {
 
   @Prop({ default: 0 })
   wishlistSaves: number;
+
+  @Prop({ default: 0 })
+  reportCount: number;
+
+  @Prop({ default: false })
+  isUnderReview: boolean;
+
+  @Prop({ default: false })
+  autoDisabled: boolean;
+
+  @Prop()
+  disabledAt?: Date;
+
+  @Prop()
+  disabledReason?: string;
+
+  @Prop()
+  reviewedBy?: string;
+
+  @Prop()
+  reviewedAt?: Date;
+
+  @Prop()
+  expiredAt?: Date;
 
   @Prop({ type: [String] })
   tags: string[];
