@@ -296,4 +296,19 @@ export class VouchersController {
       query.status,
     );
   }
+
+  /**
+   * GET /vouchers/merchant/loyalty
+   * Merchant loyalty rewards summary by customer (awarded only after successful redeem)
+   */
+  @Get('merchant/loyalty')
+  @UseGuards(JwtAuthGuard)
+  async getMerchantLoyaltyRewards(@CurrentUser() user: any) {
+    const merchantId = user?.id || user?._id;
+    if (!merchantId) {
+      throw new BadRequestException('Merchant ID not found');
+    }
+
+    return await this.vouchersService.getMerchantLoyaltyRewards(merchantId);
+  }
 }

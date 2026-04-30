@@ -77,6 +77,16 @@ export class Voucher {
   @Prop({ type: Date })
   sharedAt?: Date;
 
+  // Loyalty rewards awarded after successful redeem/order completion
+  @Prop({ default: false })
+  loyaltyRewardApplied: boolean;
+
+  @Prop({ default: 0 })
+  loyaltyPointsAwarded: number;
+
+  @Prop({ type: Date })
+  loyaltyAwardedAt?: Date;
+
   // Timestamps automatically added by @Schema decorator
   // createdAt: Date;
   // updatedAt: Date;

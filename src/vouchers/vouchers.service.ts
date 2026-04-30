@@ -776,6 +776,24 @@ export class VouchersService implements OnModuleInit {
       voucher.redeemedAt = new Date();
       voucher.redeemedByMerchantId = new Types.ObjectId(actualMerchantId);
       voucher.redemptionCode = redemptionCode;
+
+      // Loyalty reward should be granted only after successful redeem/completion.
+      // Points are controlled by merchant on the offer itself (1-5 stars/points).
+      let loyaltyPointsAwarded = 0;
+      const offer = await this.bannerModel
+        .findById(voucher.offerId)
+        .select('loyaltyRewardEnabled loyaltyStarsToOffer')
+        .lean()
+        .exec();
+      if (offer?.loyaltyRewardEnabled) {
+        const configuredPoints = Number(offer.loyaltyStarsToOffer || 0);
+        if (configuredPoints > 0) {
+          loyaltyPointsAwarded = configuredPoints;
+        }
+      }
+      voucher.loyaltyRewardApplied = loyaltyPointsAwarded > 0;
+      voucher.loyaltyPointsAwarded = loyaltyPointsAwarded;
+      voucher.loyaltyAwardedAt = loyaltyPointsAwarded > 0 ? new Date() : undefined;
       await voucher.save();
 
       // Keep Orders tab in sync: move linked accepted/pending order to COMPLETED.
@@ -803,6 +821,7 @@ export class VouchersService implements OnModuleInit {
           userName: user?.name,
           offerTitle: voucher.offerTitle,
           discount: voucher.discount,
+          loyaltyPointsAwarded,
           redeemedAt: voucher.redeemedAt,
           redemptionCode: redemptionCode,
         },
@@ -995,5 +1014,83 @@ export class VouchersService implements OnModuleInit {
       this.logger.error(`Error fetching merchant offers: ${error.message}`);
       throw error;
     }
+  }
+
+  async getMerchantLoyaltyRewards(merchantId: string) {
+    const rewardRows = await this.voucherModel
+      .find({
+        merchantId: new Types.ObjectId(merchantId),
+        status: VoucherStatus.REDEEMED,
+        loyaltyRewardApplied: true,
+        loyaltyPointsAwarded: { $gt: 0 },
+      })
+      .select('userId loyaltyPointsAwarded loyaltyAwardedAt redeemedAt offerTitle voucherId')
+      .sort({ loyaltyAwardedAt: -1, redeemedAt: -1 })
+      .lean()
+      .exec();
+
+    if (!rewardRows.length) {
+      return {
+        success: true,
+        data: {
+          totalCustomers: 0,
+          totalPointsAwarded: 0,
+          customers: [],
+        },
+      };
+    }
+
+    const userIds = [...new Set(rewardRows.map((row: any) => String(row.userId)).filter(Boolean))];
+    const users = await this.userModel
+      .find({ _id: { $in: userIds } })
+      .select('name')
+      .lean()
+      .exec();
+    const userNameMap = new Map(users.map((u: any) => [String(u._id), u.name || 'Unknown Customer']));
+
+    const customerMap = new Map<
+      string,
+      {
+        userId: string;
+        customerName: string;
+        points: number;
+        rewardsCount: number;
+        latestAwardedAt: Date | null;
+      }
+    >();
+
+    for (const row of rewardRows as any[]) {
+      const uid = String(row.userId);
+      const points = Number(row.loyaltyPointsAwarded || 0);
+      const awardedAt = row.loyaltyAwardedAt || row.redeemedAt || null;
+      const current = customerMap.get(uid);
+      if (!current) {
+        customerMap.set(uid, {
+          userId: uid,
+          customerName: userNameMap.get(uid) || 'Unknown Customer',
+          points,
+          rewardsCount: 1,
+          latestAwardedAt: awardedAt,
+        });
+      } else {
+        current.points += points;
+        current.rewardsCount += 1;
+        if (!current.latestAwardedAt || (awardedAt && new Date(awardedAt) > new Date(current.latestAwardedAt))) {
+          current.latestAwardedAt = awardedAt;
+        }
+      }
+    }
+
+    const customers = Array.from(customerMap.values()).sort((a, b) => b.points - a.points);
+    const totalPointsAwarded = customers.reduce((sum, c) => sum + c.points, 0);
+
+    return {
+      success: true,
+      data: {
+        totalCustomers: customers.length,
+        totalPointsAwarded,
+        customers,
+      },
+    };
   }
 }
